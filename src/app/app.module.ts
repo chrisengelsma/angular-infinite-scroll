@@ -5,11 +5,13 @@ import { AppComponent } from './app.component';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { HttpClientModule } from '@angular/common/http';
 import { FactService } from './_service/fact.service';
+import { FactScrollerComponent } from './fact-scroller/fact-scroller.component';
 
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
+    FactScrollerComponent
   ],
   imports: [
     BrowserModule,
