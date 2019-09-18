@@ -1,24 +1,13 @@
-<cdk-virtual-scroll-viewport itemSize="100"
-                             class="fact-scroll-viewport">
-
+<cdk-virtual-scroll-viewport itemSize="100" class="fact-scroll-viewport">
   <li *cdkVirtualFor="let fact of dataSource">
 
     <div *ngIf="fact" class="fact-item">
-      <div class="fact-date">
-        {{ fact.year }}
-      </div>
-      <div class="fact-text">
-        {{ fact.text }}
-      </div>
+      <div class="fact-date">{{ fact.year }}</div>
+      <div class="fact-text">{{ fact.text }}</div>
     </div>
     <div *ngIf="!fact">
       Loading ...
     </div>
-<!--    <div class="fact-wrapper">-->
-<!--      <div class="fact-year">{{ fact.number }}</div>-->
-<!--      <div class="fact-fact">{{ fact.text }}</div>-->
-<!--    </div>-->
 
   </li>
-
 </cdk-virtual-scroll-viewport>

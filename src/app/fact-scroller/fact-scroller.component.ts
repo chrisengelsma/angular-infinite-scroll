@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { Component } from '@angular/core';
 import { Fact } from '../_model/fact.model';
 import { FactService } from '../_service/fact.service';
 import { CollectionViewer, DataSource } from '@angular/cdk/collections';
@@ -8,8 +8,7 @@ import { BehaviorSubject, Observable, Subscription } from 'rxjs';
 @Component({
   selector: 'app-fact-scroller',
   templateUrl: './fact-scroller.component.html',
-  styleUrls: ['./fact-scroller.component.scss'],
-  changeDetection: ChangeDetectionStrategy.OnPush
+  styleUrls: ['./fact-scroller.component.scss']
 })
 export class FactScrollerComponent {
 
@@ -33,34 +32,17 @@ export class FactsDataSource extends DataSource<Fact | undefined> {
     super();
 
     // Start with some data.
-    this.fetchFactPage();
-  }
-
-  /**
-   * Fetch a fact.
-   */
-  fetchFactPage(): void {
-    for (let i = 0; i < this.pageSize; ++i) {
-      this.factService.getRandomFact().subscribe(res => {
-        this.cachedFacts = this.cachedFacts.concat(res);
-        this.dataStream.next(this.cachedFacts);
-      });
-    }
+    this._fetchFactPage();
   }
 
   connect(collectionViewer: CollectionViewer): Observable<(Fact | undefined)[] | ReadonlyArray<Fact | undefined>> {
     this.subscription.add(collectionViewer.viewChange.subscribe(range => {
 
-      const lastIndex = range.end;
-      const currentPage = this.getPageForIndex(range.end);
-
-      if (lastIndex && this.cachedFacts) {
-        console.log(this.getPageForIndex(lastIndex), this.cachedFacts.length);
-      }
+      const currentPage = this._getPageForIndex(range.end);
 
       if (currentPage > this.lastPage) {
         this.lastPage = currentPage;
-        this.fetchFactPage();
+        this._fetchFactPage();
       }
     }));
     return this.dataStream;
@@ -70,17 +52,17 @@ export class FactsDataSource extends DataSource<Fact | undefined> {
     this.subscription.unsubscribe();
   }
 
-  /**
-   * Returns the page for a given index.
-   */
-  private getPageForIndex(i: number): number {
+  private _fetchFactPage(): void {
+    for (let i = 0; i < this.pageSize; ++i) {
+      this.factService.getRandomFact().subscribe(res => {
+        this.cachedFacts = this.cachedFacts.concat(res);
+        this.dataStream.next(this.cachedFacts);
+      });
+    }
+  }
+
+  private _getPageForIndex(i: number): number {
     return Math.floor(i / this.pageSize);
   }
 
-  /**
-   * Gets a random year from 1 to maxYear (AD)
-   */
-  getRandomYear(maxYear: number = 2019): number {
-    return Math.ceil(Math.random() * maxYear) + 1;
-  }
 }

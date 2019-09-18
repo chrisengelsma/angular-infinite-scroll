@@ -114,9 +114,180 @@ In our `fact-scroller.component.html` let's construct the scroller scaffolding:
 
 {% endraw %}
 
+Here, we use a `cdk-virtual-scroll-viewport` to be our virtual scroller. Within this, we loop over our items using `*cdkVirtualFor`, which is analogous as using `*ngFor`.
 
-Here, we define a `cdk-virtual-scroll-viewport` to act as our virtual scroller, within we declare the list items by attaching `*cdkVirtualFor`, which is analogous as using `*ngFor`
+In order for the component to properly size its internal scroller, we need to tell the scroller how tall each item will be (in pixels). This is done using the `itemSize` directive. So, `itemSize="100"` means that item in the list will require 100px of height.
 
-In order for the component to properly size its internal scroller, we also need to tell it how tall (in pixels) each item will be. This is done using `itemSize`. So, `itemSize="100"` tells it to allocate 100 pixels per line item.
+We've also told the scroller to pull the data from "dataSource" (which doesn't exist yet, so it's best we create it now).
 
-That's
+## Our Custom FactsDataSource
+
+In our `fact-scroller.component.ts` file, we need to define what our data source looks like. To do this, we will extend the `DataSource` class in `@angular/cdk/collections`. Here is what our data source looks like:
+
+{% raw %}
+
+<p class="file-desc"><span>fact-scroller.component.ts</span></p>
+
+```typescript
+import { CollectionViewer, DataSource } from '@angular/cdk/collections';
+
+export interface Fact {
+  text?: string;
+  date?: string;
+}
+
+export class FactsDataSource extends DataSource<Fact | undefined> {
+  private cachedFacts = Array.from<Fact>({ length: 0 });
+  private dataStream = new BehaviorSubject<(Fact | undefined)[]>(this.cachedFacts);
+  private subscription = new Subscription();
+
+  constructor(private factService: FactService) {
+    super();
+  }
+
+  connect(collectionViewer: CollectionViewer): Observable<(Fact | undefined)[] | ReadonlyArray<Fact | undefined>> {
+    this.subscription.add(collectionViewer.viewChange.subscribe(range => {
+      // Update the data
+    }));
+    return this.dataStream;
+  }
+
+  disconnect(collectionViewer: CollectionViewer): void {
+    this.subscription.unsubscribe();
+  }
+}
+
+```
+
+{% endraw %}
+
+There's a lot to digest here, so let's break it down.
+
+We first define our model, `Fact`, which will be define our data structure.
+
+Within `FactsDataSource`, we need to implement two functions: `connect()`, and `disconnect()`. The datasource is subscribed to any changes in the collection viewer (e.g. the user scrolls), and will then perform an action and return the data stream. We are going to tell the datasource to get more data when we have reached the end of the list.
+
+We also declared three member variables: 
+
+* `cachedFacts`: our cached results,
+* `dataStream`: a RxJS BehaviorSubject to propagate changes to our cached results, and
+* `subscription`: a subscription to listen for view collection changes.
+
+Let's define a few helpers within this class:
+
+```typescript
+  private pageSize = 10;
+  private lastPage = 0;
+
+  private _fetchFactPage(): void {
+    for (let i = 0; i < this.pageSize; ++i) {
+      this.factService.getRandomFact().subscribe(res => {
+        this.cachedFacts = this.cachedFacts.concat(res);
+        this.dataStream.next(this.cachedFacts);
+      });
+    }
+  }
+
+private _getPageForIndex(i: number): number {
+    return Math.floor(i / this.pageSize);
+}
+```
+
+I'm setting the page size to 10.0, meaning I want to grab 10 facts at a time. I'm also going to keep track of the last page loaded.
+
+`_fetchFactPage()` simply makes a call to our service to get some facts, which are then appended to the cache.
+
+`_getPageForIndex()` will convert an line index to a page (or batch) value.
+
+
+Putting these all together, we can then  define how we want the list to update within the subscription callback;
+
+```typescript
+connect(collectionViewer: CollectionViewer): Observable<(Fact | undefined)[] | ReadonlyArray<Fact | undefined>> {
+    this.subscription.add(collectionViewer.viewChange.subscribe(range => {
+
+      const currentPage = this._getPageForIndex(range.end);
+
+      if (currentPage > this.lastPage) {
+        this.lastPage = currentPage;
+        this._fetchFactPage();
+      }
+
+    }));
+    return this.dataStream;
+  }
+``` 
+
+We also want to start with some data, so we can make a call to our fetch function in the constructor:
+
+```typescript
+constructor(private factService: FactService) {
+    super();
+
+    // Start with some data.
+    this._fetchFactPage();
+  }
+```
+
+Our custom datasource should now get us where we need to go. The final piece to put it all together is to add our new data source to the component.
+
+```typescript
+@Component({
+  selector: 'app-fact-scroller',
+  templateUrl: './fact-scroller.component.html',
+  styleUrls: ['./fact-scroller.component.scss']
+})
+export class FactScrollerComponent {
+
+  dataSource: FactsDataSource;
+
+  constructor(private factService: FactService) {
+    this.dataSource = new FactsDataSource(factService);
+  }
+
+}
+```
+
+And we're done! Everything from here on out is formatting. I've rewritten my html to display the facts like so:
+
+```html
+<cdk-virtual-scroll-viewport itemSize="100" class="fact-scroll-viewport">
+  <li *cdkVirtualFor="let fact of dataSource">
+
+    <div *ngIf="fact" class="fact-item">
+      <div class="fact-date">{{ fact.year }}</div>
+      <div class="fact-text">{{ fact.text }}</div>
+    </div>
+    <div *ngIf="!fact">
+      Loading ...
+    </div>
+
+  </li>
+</cdk-virtual-scroll-viewport>
+
+```
+
+
+{% raw %}
+
+<p class="file-desc"><span>fact-scroller.component.ts</span></p>
+
+```typescript
+@Component({
+  selector: 'app-fact-scroller',
+  templateUrl: './fact-scroller.component.html',
+  styleUrls: ['./fact-scroller.component.scss']
+})
+export class FactScrollerComponent {
+
+  dataSource: FactsDataSource;
+
+  constructor(private factService: FactService) {
+    this.dataSource = new FactsDataSource(factService);
+  }
+
+}
+```
+
+{% endraw %}
+
