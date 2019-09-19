@@ -6,7 +6,6 @@
 .fact-item {
   height: 100px;
   display: flex;
-  background-color: #88c7e9;
 
   .fact-date {
     height: 100%;
@@ -32,6 +31,5 @@ cdk-virtual-scroll-viewport {
 
   li {
     list-style: none;
-    padding: 20px;
   }
 }

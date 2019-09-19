@@ -40,6 +40,10 @@ export class FactsDataSource extends DataSource<Fact | undefined> {
 
       const currentPage = this._getPageForIndex(range.end);
 
+      if (currentPage && range) {
+        console.log(currentPage, this.lastPage);
+      }
+
       if (currentPage > this.lastPage) {
         this.lastPage = currentPage;
         this._fetchFactPage();
